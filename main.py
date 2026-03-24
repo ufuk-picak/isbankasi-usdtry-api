@@ -4,28 +4,29 @@ from bs4 import BeautifulSoup
 
 app = FastAPI()
 
-def get_usd_try():
+@app.get("/")
+def read_root():
+    return {"status": "API is alive"}
+
+@app.get("/api/usd-try")
+def get_usd_try_api():
     url = "https://www.isbank.com.tr/en/foreign-exchange-rates"
     headers = {"User-Agent": "Mozilla/5.0"}
 
     try:
-        res = requests.get(url, headers=headers, timeout=5)
-        res.raise_for_status()
+        res = requests.get(url, headers=headers)
         soup = BeautifulSoup(res.text, "html.parser")
         rows = soup.find_all("tr")
 
         for row in rows:
             cols = row.find_all("td")
-            if len(cols) > 2 and "USD" in cols[0].text:
-                buy = cols[1].text.strip()
-                sell = cols[2].text.strip()
-                return {"buy": buy, "sell": sell}
-
-        return {"error": "USD bulunamadı"}
-
+            if len(cols) > 2:
+                if "USD" in cols[0].text:
+                    return {
+                        "buy": cols[1].text.strip(),
+                        "sell": cols[2].text.strip()
+                    }
     except Exception as e:
         return {"error": str(e)}
 
-@app.get("/usdtry")
-def usd_try():
-    return get_usd_try()
+    return {"error": "USD not found"}
